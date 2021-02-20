@@ -1,0 +1,42 @@
+{
+  "name": "tendieterminal",
+  "version": "0.1",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack-dev-server --mode development --open --hot --history-api-fallback",
+    "build": "webpack --mode production",
+    "serve": "yarn build && serve"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@babel/preset-react": "^7.9.4",
+    "@fortawesome/fontawesome-svg-core": "^1.2.34",
+    "@fortawesome/free-solid-svg-icons": "^5.15.2",
+    "@fortawesome/react-fontawesome": "^0.1.14",
+    "comlink": "^4.3.0",
+    "core-js": "3",
+    "dompurify": "^2.2.6",
+    "lodash": "^4.17.20",
+    "normalized-reducer": "^0.5.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-micro-modal": "^2.0.2",
+    "react-router-dom": "^5.1.2",
+    "serve": "^11.3.2",
+    "snoostream": "^1.0.1",
+    "snoowrap": "^1.22.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.0",
+    "babel-loader": "^8.1.0",
+    "css-loader": "^3.4.2",
+    "html-webpack-plugin": "^4.0.4",
+    "style-loader": "^1.1.3",
+    "url-loader": "^4.0.0",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3",
+    "worker-plugin": "^5.0.0"
+  }
+}
