@@ -4,26 +4,48 @@ import * as Comlink from "comlink";
 import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.js";
 
 import { takeRight, randomInt } from "../utils.js";
+import { speechSynthesis } from "./speechSynth.jsx";
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
+const voiceDefaults = [
+  (v) => v.lang === "en-GB" && v.name === "Daniel",
+  (v) => v.lang === "en-GB" && v.name === "Google English UK Male",
+  (v) => v.default,
+];
+
+const stickyState = (defaultValue, key) => {
+  const [value, setValue] = useState(() => {
+    const stickyValue = window.localStorage.getItem(key);
+    return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+};
+
 export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
+  const synth = speechSynthesis();
+
   const [subscribed, setSubscribed] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [depth, setDepth] = useState(5);
 
+  const [voice, setVoice] = stickyState("", "voiceURI");
+  const [depth, setDepth] = stickyState(5, "speechDepth");
+  const [rate, setRate] = stickyState(1.4, "voiceRate");
+  const [pitch, setPitch] = stickyState(1, "voicePitch");
   const [synthQ, updateSynthQ] = useState([]);
 
-  const synth = useRef();
   const threadWorkerRef = useRef();
   const threadWorkerApiRef = useRef();
 
   // TODO: useMemo?
   useEffect(() => {
-    synth.current = window.speechSynthesis;
-
     threadWorkerRef.current = new Worker("../workers/thread.worker.js", {
       type: "module",
     });
@@ -31,48 +53,60 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
     threadWorkerApiRef.current = Comlink.wrap(threadWorkerRef.current);
 
     return () => {
-      synth.current?.cancel();
       threadWorkerRef.current?.terminate();
       threadWorkerApiRef.current?.[Comlink.releaseProxy]();
     };
   }, []);
 
+  const getVoice = (conditions) => {
+    for (let i = 0; i < conditions.length; i++) {
+      const match = synth.voices.find(conditions[i]);
+      if (match) {
+        return match;
+      }
+    }
+    return synth.voices[0];
+  };
+
   useEffect(() => {
-    if (synthQ && synthQ.length && !speaking && !muted) {
-      setSpeaking(true);
+    if (synth.supported && synthQ.length && !synth.speaking && !paused) {
       const posts = [...synthQ];
       const post = posts[posts.length - 1];
 
-      const speech = new SpeechSynthesisUtterance(post.body);
-
-      speech.onend = () => {
+      if (muted) {
         updateSynthQ((q) => q.filter((p) => p.id != post.id));
-        setSpeaking(false);
-      };
+      } else {
+        const speech = new SpeechSynthesisUtterance(post.body);
 
-      speech.voice = synth.current?.getVoices()[
-        synth.current
-          ?.getVoices()
-          .findIndex((v) => v.lang === "en-GB" && v.name === "Daniel") || 0
-      ];
-      speech.rate = 1.4;
-      speech.pitch = 1;
+        speech.onend = () => {
+          updateSynthQ((q) => q.filter((p) => p.id != post.id));
+        };
 
-      synth.current?.speak(speech);
+        speech.voice = getVoice(
+          voice
+            ? [(v) => v.voiceURI === voice, ...voiceDefaults]
+            : voiceDefaults
+        );
+
+        speech.rate = rate;
+        speech.pitch = pitch;
+
+        synth.speak(speech);
+      }
     }
-  }, [speaking, muted, synthQ]);
+  }, [synth.speaking, muted, synthQ]);
 
   useEffect(() => {
     if (muted) {
-      synth.current?.cancel();
+      synth.cancel();
     }
   }, [muted]);
 
   useEffect(() => {
     if (paused) {
-      synth.current?.pause();
+      synth.pause();
     } else {
-      synth.current?.resume();
+      synth.resume();
     }
   }, [paused]);
 
@@ -109,25 +143,101 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
 
   return (
     <nav className="subscription">
-      <button onClick={handleThreadWork} disabled={subscribed}>
-        Stream
-      </button>
-
-      <input type="button" onClick={randomSpeech} value="Random Speech" />
-
-      {subscribed && (
+      {synth.supported ? (
         <>
-          <button onClick={toggleMute}>{muted ? "Unmute" : "Mute"}</button>
-
-          <button onClick={togglePaused}>{paused ? "Play" : "Pause"}</button>
+          {synth.voices.length ? (
+            <ul className="controls">
+              <li>
+                <button
+                  id="stream"
+                  onClick={handleThreadWork}
+                  disabled={subscribed}
+                >
+                  Stream
+                </button>
+              </li>
+              <li>
+                <input
+                  type="button"
+                  onClick={randomSpeech}
+                  value="Random Speech"
+                />
+              </li>
+              <li>
+                <span>Voice</span>
+                <select
+                  value={voice}
+                  onChange={(e) => setVoice(e.currentTarget.value)}
+                >
+                  <option value="">Default Voice</option>
+                  {synth.voices.map((voice) => (
+                    <option value={voice.voiceURI} key={voice.voiceURI}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </select>
+              </li>
+              <li>
+                <span>Rate</span>
+                <label className="range">
+                  <input
+                    id="rate"
+                    className="range"
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    value={rate}
+                    onChange={(e) => setRate(e.currentTarget.value)}
+                    step=".1"
+                  />
+                  {rate}
+                </label>
+              </li>
+              <li>
+                <span>Pitch</span>
+                <label className="range">
+                  <input
+                    id="pitch"
+                    className="range"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value={pitch}
+                    onChange={(e) => setPitch(e.currentTarget.value)}
+                    step=".1"
+                  />
+                  {pitch}
+                </label>
+              </li>
+              {subscribed && (
+                <ul className="voice">
+                  <li>
+                    <button onClick={toggleMute}>
+                      {muted ? "Unmute" : "Mute"}
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={togglePaused}>
+                      {paused ? "Play" : "Pause"}
+                    </button>
+                  </li>
+                </ul>
+              )}
+              {/* <ul className="queue">
+                {synthQ.map((p, i) => (
+                  <li key={i}>{p.body}</li>
+                ))}
+              </ul> */}
+            </ul>
+          ) : (
+            <div className="unsupported">
+              No TTS Voices Were Found - Cannot Stream Thread
+            </div>
+          )}
         </>
+      ) : (
+        <div className="unsupported">Your Browser Doesn't Support TTS</div>
       )}
-
-      {/* <ul className="queue">
-        {synthQ.map((p, i) => (
-          <li key={i}>{p.body}</li>
-        ))}
-      </ul> */}
     </nav>
   );
 };

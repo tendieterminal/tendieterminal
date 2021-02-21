@@ -384,6 +384,66 @@ nav.subscription {
   transform: translate(-25%, -50%);
 }
 
+div.unsupported {
+  padding: 1vw;
+  max-width: 12vw;
+  border: 1px solid red;
+}
+
+ul.controls {
+  list-style: none;
+  border: 1px solid rgb(179, 179, 179);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 1vw;
+}
+
+ul.controls button {
+  font-size: 2vw;
+  padding: 0.5vw;
+}
+
+ul.controls select {
+  width: 8vw;
+}
+
+ul.controls li {
+  display: flex;
+  align-items: center;
+  font-size: 1.25vw;
+  justify-content: space-around;
+  width: 100%;
+}
+
+ul.controls li select,
+ul.controls li input {
+  margin: 0.5vw;
+}
+
+ul.voice {
+  margin-top: 1vw;
+  display: flex;
+  list-style: none;
+  padding: 0;
+  justify-content: space-between;
+}
+
+ul.voice li {
+  display: flex;
+  padding: 0.125vw;
+}
+
+label.range {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 1vw;
+}
+
 @media only screen and (max-width: 830px) {
   body {
     font-size: 3vw;
@@ -403,6 +463,9 @@ nav.subscription {
     padding: 1vw;
     flex-direction: row;
     justify-content: space-evenly;
+  }
+  div.unsupported {
+    max-width: initial;
   }
 }
 
