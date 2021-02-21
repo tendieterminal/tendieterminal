@@ -402,11 +402,6 @@ ul.controls {
   padding: 1vw;
 }
 
-ul.controls button {
-  font-size: 2vw;
-  padding: 0.5vw;
-}
-
 ul.controls select {
   width: 8vw;
 }
@@ -448,6 +443,9 @@ label.range {
   body {
     font-size: 3vw;
   }
+  .hide-on-mobile {
+    display: none !important;
+  }
   section.comments,
   article.body {
     border-left: 0;
@@ -466,6 +464,9 @@ label.range {
   }
   div.unsupported {
     max-width: initial;
+  }
+  ul.controls {
+    flex-direction: row;
   }
 }
 

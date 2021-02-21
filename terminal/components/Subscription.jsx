@@ -163,7 +163,7 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   value="Random Speech"
                 />
               </li>
-              <li>
+              <li class="hide-on-mobile">
                 <span>Voice</span>
                 <select
                   value={voice}
@@ -177,7 +177,7 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   ))}
                 </select>
               </li>
-              <li>
+              <li class="hide-on-mobile">
                 <span>Rate</span>
                 <label className="range">
                   <input
@@ -193,7 +193,7 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   {rate}
                 </label>
               </li>
-              <li>
+              <li class="hide-on-mobile">
                 <span>Pitch</span>
                 <label className="range">
                   <input
