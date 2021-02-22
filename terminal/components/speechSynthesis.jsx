@@ -32,7 +32,7 @@ export const speechSynthesis = () => {
   }, []);
 
   const speak = (utterance) => {
-    if (!supported && speaking) return;
+    if (!supported || speaking) return;
 
     setSpeaking(true);
 
@@ -60,7 +60,7 @@ export const speechSynthesis = () => {
   };
 
   const pause = () => {
-    if (!supported && !speaking) return;
+    if (!supported || !speaking) return;
 
     setPaused(true);
 
@@ -68,7 +68,7 @@ export const speechSynthesis = () => {
   };
 
   const resume = () => {
-    if (!supported && !speaking && !paused) return;
+    if (!supported || !speaking || !paused) return;
 
     setPaused(false);
 

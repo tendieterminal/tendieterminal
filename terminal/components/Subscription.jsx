@@ -4,7 +4,7 @@ import * as Comlink from "comlink";
 import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.js";
 
 import { takeRight, randomInt } from "../utils.js";
-import { speechSynthesis } from "./speechSynth.jsx";
+import { speechSynthesis } from "./speechSynthesis.jsx";
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
