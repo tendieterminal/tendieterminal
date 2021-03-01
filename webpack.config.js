@@ -4,7 +4,7 @@ const WorkerPlugin = require("worker-plugin");
 module.exports = {
   entry: path.join(__dirname, "/terminal/index.js"),
   output: {
-    filename: "[name].bundle.js",
+    filename: "[name].js",
     globalObject: "self",
     path: path.join(__dirname, "/build/"),
     publicPath: "/terminal/build/",
@@ -12,7 +12,7 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/,
+        test: /\.(js|jsx|ts)$/,
         exclude: /node_modules/,
         use: {
           loader: "babel-loader",
@@ -30,7 +30,9 @@ module.exports = {
                 },
               ],
               "@babel/preset-react",
+              "@babel/preset-typescript",
             ],
+            plugins: ["@babel/plugin-proposal-class-properties"],
           },
         },
       },
@@ -54,11 +56,9 @@ module.exports = {
   devServer: {
     compress: true,
     historyApiFallback: {
-      rewrites: [{ from: /\/terminal\/[^?]/, to: '/404.html' }]
+      rewrites: [{ from: /\/terminal\/[^?]/, to: "/404.html" }],
     },
     disableHostCheck: true,
   },
-  plugins: [
-    new WorkerPlugin(),
-  ],
+  plugins: [new WorkerPlugin()],
 };
