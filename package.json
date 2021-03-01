@@ -26,7 +26,6 @@
     "react-micro-modal": "^2.0.2",
     "react-router-dom": "^5.1.2",
     "serve": "^11.3.2",
-    "simple-text-parser": "^2.1.1",
     "snoostream": "^1.0.1",
     "snoowrap": "^1.22.0"
   },

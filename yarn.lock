@@ -5334,11 +5334,6 @@ signal-exit@^3.0.0:
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.3.tgz#a1410c2edd8f077b08b4e253c8eacfcaf057461c"
   integrity sha512-VUJ49FC8U1OxwZLxIbTTrDvLnf/6TDgxZcK8wxR8zs13xpx7xbG60ndBlhNrFi2EMuFRoeDoJO7wthSLq42EjA==
 
-simple-text-parser@^2.1.1:
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/simple-text-parser/-/simple-text-parser-2.1.1.tgz#abba48c3d3b691c7971bf1b881d1b1131c923817"
-  integrity sha512-vxq8P4gPpoDR2oz9iFjLS3e/XZPuN+thOiJvbDXQWoBS3DXOYcfTJpmGO0pJke1YjeQeibBvQZ2nAr0gUEI3AQ==
-
 snapdragon-node@^2.0.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/snapdragon-node/-/snapdragon-node-2.1.1.tgz#6c175f86ff14bdb0724563e8f3c1b021a286853b"
