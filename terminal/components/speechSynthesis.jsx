@@ -1,34 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
-export const speechSynthesis = () => {
-  const [voices, setVoices] = useState([]);
+const useSpeechSynthesis = () => {
+  const synth = useRef();
   const [speaking, setSpeaking] = useState(false);
   const [paused, setPaused] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [voices, setVoices] = useState([]);
 
-  const processVoices = (voiceOptions) => {
-    setVoices(voiceOptions);
+  const updateVoices = () => {
+    setVoices(getLanguageVoices("en"));
   };
 
-  const getVoices = () => {
-    let voiceOptions = window.speechSynthesis.getVoices();
-
-    if (voiceOptions.length > 0) {
-      processVoices(voiceOptions);
-      return;
-    }
-
-    window.speechSynthesis.onvoiceschanged = (event) => {
-      voiceOptions = event.target.getVoices();
-      processVoices(voiceOptions);
-    };
+  const getLanguageVoices = (language) => {
+    return synth.current.getVoices().filter((v) => {
+      return (
+        v.lang.replace("_", "-").substring(0, language.length) === language
+      );
+    });
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      setSupported(true);
-      getVoices();
-    }
+    if (typeof window !== "object" || !window.speechSynthesis) return;
+
+    synth.current = window.speechSynthesis;
+    synth.current.onvoiceschanged = updateVoices;
+
+    setSupported(true);
+    updateVoices();
+
+    return () => {
+      synth.current.onvoiceschanged = null;
+    };
   }, []);
 
   const speak = (utterance) => {
@@ -36,7 +38,7 @@ export const speechSynthesis = () => {
 
     setSpeaking(true);
 
-    if (utterance.onend !== null) {
+    if (utterance.onend) {
       const onEnd = utterance.onend;
       utterance.onend = () => {
         onEnd();
@@ -48,7 +50,7 @@ export const speechSynthesis = () => {
       };
     }
 
-    window.speechSynthesis.speak(utterance);
+    synth.current.speak(utterance);
   };
 
   const cancel = () => {
@@ -56,7 +58,7 @@ export const speechSynthesis = () => {
 
     setSpeaking(false);
 
-    window.speechSynthesis.cancel();
+    synth.current.cancel();
   };
 
   const pause = () => {
@@ -64,7 +66,7 @@ export const speechSynthesis = () => {
 
     setPaused(true);
 
-    window.speechSynthesis.pause();
+    synth.current.pause();
   };
 
   const resume = () => {
@@ -72,7 +74,7 @@ export const speechSynthesis = () => {
 
     setPaused(false);
 
-    window.speechSynthesis.resume();
+    synth.current.resume();
   };
 
   return {
@@ -81,8 +83,10 @@ export const speechSynthesis = () => {
     speaking,
     cancel,
     pause,
-    resume,
     paused,
+    resume,
     voices,
   };
 };
+
+export default useSpeechSynthesis;

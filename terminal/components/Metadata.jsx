@@ -1,4 +1,5 @@
 import React from "react";
+
 import {
   faComment,
   faArrowUp,
@@ -6,7 +7,6 @@ import {
   faClock,
   faBullhorn,
 } from "@fortawesome/free-solid-svg-icons";
-
 import { FontAwesomeIcon as FAI } from "@fortawesome/react-fontawesome";
 
 const timeAgo = (timestamp) => {

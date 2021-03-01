@@ -6,45 +6,43 @@ import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
-import normalizedSlice, { Cardinalities } from "normalized-reducer";
-
-const commentSchema = {
-  comment: {
-    parent: {
-      type: "comment",
-      cardinality: Cardinalities.ONE,
-      reciprocal: "children",
-    },
-    children: {
-      type: "comment",
-      cardinality: Cardinalities.MANY,
-      reciprocal: "parent",
-    },
-  },
-};
-
-export const {
-  emptyState,
-  actionCreators,
-  reducer,
-  selectors,
-  actionTypes,
-} = normalizedSlice(commentSchema);
+import { actionCreators } from "../reducers/comments.js";
+import { sleep } from "../utils.js";
+import Parser from "../services/parser.ts";
 
 const subscriptionApi = {
   startSubscription,
 };
 
-const sleep = () =>
-  new Promise((res) => {
-    setTimeout(res, 2500);
-  });
+const parser = new Parser();
+// TODO: rewrite reddit links to tendieterminal
+// const redirectHelper = newParser()
+
+parser.addPreset("mdlink", (mdlink, text) => {
+  try {
+    let url = new URL(text);
+    return url.host;
+  } catch (e) {
+    return text;
+  }
+});
+
+parser.addPreset("url", (url) => {
+  try {
+    let linkURL = new URL(url);
+    return linkURL.host;
+  } catch (e) {
+    return url;
+  }
+});
 
 const normalizeComment = (data, parent) => {
   const hasParent = parent && data.parent_id && data.parent_id.startsWith("t1");
   return {
     kind: "t1",
     depth: parent && data.depth ? data.depth : 0,
+    collapsed: false,
+    filtered: false, // TODO: filter() array of parser.toTree() node properties
     ...(hasParent && { parent: data.parent_id }),
     ...(data.created_utc && {
       created: new Date(data.created_utc * 1000),
@@ -95,8 +93,6 @@ async function* startSubscription(subreddit, link_id, parents = false) {
           actionCreators.create("comment", comment.name, normalized, 0)
         );
 
-        bodies.push({ id: comment.name, body: comment.body });
-
         if (normalized.parent) {
           actions.push(
             actionCreators.attach(
@@ -108,6 +104,12 @@ async function* startSubscription(subreddit, link_id, parents = false) {
             )
           );
         }
+
+        // TODO: filter() array of parser.toTree() node properties
+        bodies.push({
+          id: comment.name,
+          body: parser.render(comment.body),
+        });
       }
     }
 
@@ -122,7 +124,7 @@ async function* startSubscription(subreddit, link_id, parents = false) {
       client.setAccessToken(token.accessToken);
     }
 
-    await sleep();
+    await sleep(2500);
   }
 }
 

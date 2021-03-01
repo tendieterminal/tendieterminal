@@ -276,6 +276,7 @@ article.comment {
   font-size: 0.8em;
   overflow: hidden;
   border-top: 1px solid #646667;
+  /* animation: expand 0.25s ease-in-out; */
 }
 
 article.comment > .parent {
@@ -358,16 +359,38 @@ footer ul {
   list-style: none;
 }
 
+@keyframes expand {
+  from {
+    transform: scale(0);
+    opacity: 0;
+    background: grey;
+  }
+}
+
 article.body,
-section.comments {
+section.replies {
   border: 1px solid rgb(179, 179, 179);
   margin: 2vw;
 }
 
+/* 
 article.body,
-article.post,
-section.comments {
+article.post {
   width: calc(80% - 2vw * 2);
+} */
+
+section.replies {
+  /* display: flex;
+  flex-direction: column;
+  height: 100%; */
+  width: 100%;
+  /* flexDirection: "column",
+    height: "100%",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+    padding: "",
+    width: "100%",
+  }, */
 }
 
 article.body > .md {
@@ -375,13 +398,21 @@ article.body > .md {
 }
 
 nav.subscription {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  /* backgroundColor: "#F7F7F7", */
+  /* borderRight: "1px solid #ECECEC", */
+  width: 300px;
   display: flex;
+  align-items: center;
+  /* display: flex;
   flex-direction: column;
   margin: auto;
   position: fixed;
   top: 50%;
   right: 0;
-  transform: translate(-25%, -50%);
+  transform: translate(-25%, -50%); */
 }
 
 div.unsupported {

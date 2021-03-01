@@ -4,69 +4,74 @@ import * as Comlink from "comlink";
 import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.js";
 
 import { takeRight, randomInt } from "../utils.js";
-import { speechSynthesis } from "./speechSynthesis.jsx";
+import { stickyState } from "../utils/react.jsx";
+
+import useSpeechSynthesis from "./speechSynthesis.jsx";
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
-const voiceDefaults = [
-  (v) => v.lang === "en-GB" && v.name === "Daniel",
-  (v) => v.lang === "en-GB" && v.name === "Google English UK Male",
+const preferredVoices = [
+  // (v) => v.lang === "en-GB" && v.name === "Daniel",
+  (v) => v.lang === "en-GB" && v.name === "Google UK English Male",
   (v) => v.default,
 ];
 
-const stickyState = (defaultValue, key) => {
-  const [value, setValue] = useState(() => {
-    const stickyValue = window.localStorage.getItem(key);
-    return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
-  });
-
-  useEffect(() => {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-
-  return [value, setValue];
-};
-
 export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
-  const synth = speechSynthesis();
+  const synth = useSpeechSynthesis();
 
   const [subscribed, setSubscribed] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  const [voice, setVoice] = stickyState("", "voiceURI");
-  const [depth, setDepth] = stickyState(5, "speechDepth");
+  const [depth, setDepth] = stickyState(1, "speechDepth");
+  const [synthQ, updateSynthQ] = useState([]);
+
+  const [voice, setVoice] = useState(0);
+  const [voiceURI, setVoiceURI] = stickyState("", "voiceURI");
   const [rate, setRate] = stickyState(1.4, "voiceRate");
   const [pitch, setPitch] = stickyState(1, "voicePitch");
-  const [synthQ, updateSynthQ] = useState([]);
 
   const threadWorkerRef = useRef();
   const threadWorkerApiRef = useRef();
 
+  const findVoice = (voiceOptions, conditions) => {
+    for (let i = 0; i < conditions.length; i++) {
+      const match = voiceOptions.findIndex(conditions[i]);
+      if (match !== -1) return match;
+    }
+    return 0;
+  };
+
+  const setVoiceIndex = () => {
+    setVoice(
+      findVoice(
+        synth.voices,
+        voiceURI
+          ? [(v) => v.voiceURI === voiceURI, ...preferredVoices]
+          : preferredVoices
+      )
+    );
+  };
+
   // TODO: useMemo?
   useEffect(() => {
     threadWorkerRef.current = new Worker("../workers/thread.worker.js", {
+      name: "thread",
       type: "module",
     });
 
     threadWorkerApiRef.current = Comlink.wrap(threadWorkerRef.current);
 
     return () => {
+      synth.cancel();
       threadWorkerRef.current?.terminate();
       threadWorkerApiRef.current?.[Comlink.releaseProxy]();
     };
   }, []);
 
-  const getVoice = (conditions) => {
-    for (let i = 0; i < conditions.length; i++) {
-      const match = synth.voices.find(conditions[i]);
-      if (match) {
-        return match;
-      }
-    }
-    return synth.voices[0];
-  };
+  useEffect(() => {
+    setVoiceIndex();
+  }, [synth.voices, voiceURI]);
 
   useEffect(() => {
     if (synth.supported && synthQ.length && !synth.speaking && !paused) {
@@ -82,15 +87,9 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
           updateSynthQ((q) => q.filter((p) => p.id != post.id));
         };
 
-        speech.voice = getVoice(
-          voice
-            ? [(v) => v.voiceURI === voice, ...voiceDefaults]
-            : voiceDefaults
-        );
-
+        speech.voice = synth.voices[voice];
         speech.rate = rate;
         speech.pitch = pitch;
-
         synth.speak(speech);
       }
     }
@@ -119,6 +118,8 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
         subreddit,
         link_id
       );
+
+      // const iterator = await threadWorkerApiRef.current?.startShitposting();
 
       for await (const comments of iterator) {
         dispatch(actions.batch(...comments.batch));
@@ -163,21 +164,35 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   value="Random Speech"
                 />
               </li>
-              <li class="hide-on-mobile">
+              {subscribed && (
+                <ul className="voice">
+                  <li>
+                    <button onClick={toggleMute}>
+                      {muted ? "Unmute" : "Mute"}
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={togglePaused}>
+                      {paused ? "Play" : "Pause"}
+                    </button>
+                  </li>
+                </ul>
+              )}
+              <li className="hide-on-mobile">
                 <span>Voice</span>
                 <select
-                  value={voice}
-                  onChange={(e) => setVoice(e.currentTarget.value)}
+                  value={voiceURI}
+                  onChange={(e) => setVoiceURI(e.currentTarget.value)}
                 >
                   <option value="">Default Voice</option>
                   {synth.voices.map((voice) => (
-                    <option value={voice.voiceURI} key={voice.voiceURI}>
+                    <option key={voice.voiceURI} value={voice.voiceURI}>
                       {voice.name} ({voice.lang})
                     </option>
                   ))}
                 </select>
               </li>
-              <li class="hide-on-mobile">
+              <li className="hide-on-mobile">
                 <span>Rate</span>
                 <label className="range">
                   <input
@@ -193,7 +208,7 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   {rate}
                 </label>
               </li>
-              <li class="hide-on-mobile">
+              <li className="hide-on-mobile">
                 <span>Pitch</span>
                 <label className="range">
                   <input
@@ -209,20 +224,23 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   {pitch}
                 </label>
               </li>
-              {subscribed && (
-                <ul className="voice">
-                  <li>
-                    <button onClick={toggleMute}>
-                      {muted ? "Unmute" : "Mute"}
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={togglePaused}>
-                      {paused ? "Play" : "Pause"}
-                    </button>
-                  </li>
-                </ul>
-              )}
+              <li className="hide-on-mobile">
+                <span>Depth</span>
+                <label className="range">
+                  <input
+                    id="depth"
+                    className="range"
+                    type="range"
+                    min="5"
+                    max="20"
+                    value={depth}
+                    onChange={(e) => setDepth(e.currentTarget.value)}
+                    step="1"
+                  />
+                  {depth}
+                </label>
+              </li>
+
               {/* <ul className="queue">
                 {synthQ.map((p, i) => (
                   <li key={i}>{p.body}</li>

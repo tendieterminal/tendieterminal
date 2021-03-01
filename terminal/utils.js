@@ -1,3 +1,7 @@
+import { sanitize } from "dompurify";
+
+export { sanitize };
+
 export const pi = (n) => {
   let v = 0;
   for (let i = 1; i <= n; i += 4) {
@@ -54,3 +58,16 @@ export const takeRight = (array, n = 1) => {
 export const randomInt = (max) => {
   return Math.floor(Math.random() * Math.floor(max));
 };
+
+export const randomString = (length = 12) => {
+  const n = Math.floor(
+    Math.pow(10, length - 1) +
+      Math.random() * (Math.pow(10, length) - Math.pow(10, length - 1) - 1)
+  );
+  return n.toString();
+};
+
+export const sleep = (ms) =>
+  new Promise((res) => {
+    setTimeout(res, ms);
+  });

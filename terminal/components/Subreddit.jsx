@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { uniqBy as uniqueBy } from "lodash";
+
+import { sanitize } from "../utils.js";
 
 import Select from "./Select.jsx";
 import SortButton from "./SortButton.jsx";
@@ -10,11 +12,27 @@ import { Thumbnail } from "./Content.jsx";
 
 const Listing = ({ listing }) => {
   return (
-    <Link to={`/comments/${listing.subreddit}/${listing.id}`}>
+    <Link to={listing.permalink}>
       <article className="listing">
         <Thumbnail post={listing} />
         <div className="info">
-          <div className="title">{listing.title}</div>
+          {/* <div style={{ display: "flex", alignItems: "center" }}> */}
+          <div
+            className="title"
+            dangerouslySetInnerHTML={{
+              __html: sanitize(listing.title),
+            }}
+          />
+          {/* <span
+              className="flair"
+              style={{
+                backgroundColor: listing.link_flair_background_color,
+                padding: "1vh",
+              }}
+            >
+              {listing.link_flair_text}
+            </span>
+          </div> */}
           <Author post={listing} />
           <Metadata post={listing} />
         </div>
@@ -24,8 +42,9 @@ const Listing = ({ listing }) => {
 };
 
 const Subreddit = () => {
+  const { sub = "wallstreetbetsOGs" } = useParams();
+
   const sortDefault = "hot";
-  const subDefault = "wallstreetbetsOGs";
   const sortOptions = ["Hot", "New", "Top", "Rising"];
 
   // Why the fuck would you put link_flair_templates
@@ -51,7 +70,7 @@ const Subreddit = () => {
 
   const [listings, setListings] = useState(null);
 
-  const [subreddit] = useState(subDefault);
+  const [subreddit] = useState(sub);
 
   const [flair, setFlair] = useState("");
   const [search, setSearch] = useState("");
@@ -95,9 +114,13 @@ const Subreddit = () => {
       .then((response) => response.json())
       .then((json) => {
         setLoading(false);
-        setLastRequest(json.data);
-        setUniqueListings(mapListings(json));
-        setError(null);
+        if (json.error && json.error === 404) {
+          setError("This subreddit does not exist");
+        } else {
+          setLastRequest(json.data);
+          setUniqueListings(mapListings(json));
+          setError(null);
+        }
       })
       .catch((e) => {
         setLoading(false);
@@ -114,7 +137,6 @@ const Subreddit = () => {
 
       api.searchParams.set("after", lastRequest.after);
 
-      console.log(api.href);
       fetch(api.href)
         .then((response) => response.json())
         .then((more) => {
@@ -158,6 +180,7 @@ const Subreddit = () => {
 
   return (
     <div>
+      {error && <section className="error">{error}</section>}
       {listings !== null && (
         <>
           <nav className="subreddit">
