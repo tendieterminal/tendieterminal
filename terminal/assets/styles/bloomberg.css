@@ -379,6 +379,12 @@ article.post {
   width: calc(80% - 2vw * 2);
 } */
 
+div.comments {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+
 section.replies {
   /* display: flex;
   flex-direction: column;
@@ -477,12 +483,20 @@ label.range {
   .hide-on-mobile {
     display: none !important;
   }
-  section.comments,
+  div.comments {
+    flex-direction: column;
+  }
+  section.replies,
   article.body {
-    border-left: 0;
-    border-right: 0;
+    border: 0;
     margin: 0;
     width: 100%;
+  }
+  .more {
+    width: 24vw;
+  }
+  .more.child {
+    font-size: 2vw;
   }
   nav.subscription {
     position: static;
