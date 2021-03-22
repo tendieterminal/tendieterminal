@@ -1,10 +1,4 @@
-import React, {
-  useContext,
-  useEffect,
-  useState,
-  createRef,
-  forwardRef,
-} from "react";
+import React, { useContext, useEffect, useState } from "react";
 
 import { Link } from "react-router-dom";
 
@@ -191,11 +185,11 @@ const MoreReplies = ({ id, data }) => {
   );
 };
 
-// const Comment = forwardRef(({ id, data, parentRef }, ref) => {
 const Comment = ({ id, data }) => {
-  const { threadState, streamState } = useContext(CommentsContext);
+  const { threadState, streamState, refs } = useContext(CommentsContext);
   const [state, dispatch] = threadState;
   const [streaming] = streamState;
+  const [getRef, setRef] = refs;
 
   const [collapsed, setCollapsed] = useState(false);
   const [replying, setReplying] = useState(false);
@@ -244,17 +238,22 @@ const Comment = ({ id, data }) => {
     data.all_awardings?.length || data.total_awards_received;
 
   const highlightParent = () => {
-    parentRef.current.style.backgroundColor = "#383838";
+    getRef(data.parent).current.style.backgroundColor = "#383838";
   };
 
   const unhighlightParent = () => {
-    parentRef.current.style.backgroundColor = "black";
+    getRef(data.parent).current.style.backgroundColor = "black";
   };
 
   return (
     <>
       {/* <article id={id} ref={ref} className={classNames} style={commentStyle}> */}
-      <article id={id} className={classNames} style={commentStyle}>
+      <article
+        id={id}
+        ref={setRef(id)}
+        className={classNames}
+        style={commentStyle}
+      >
         <div className={data.depth ? "child" : "parent"}>
           <header className="metadata">
             <ul>
@@ -313,7 +312,9 @@ const Comment = ({ id, data }) => {
               <span
                 style={{ cursor: "pointer" }}
                 onClick={() => {
-                  parentRef?.current.scrollIntoView({ behavior: "smooth" });
+                  getRef(data.parent).current.scrollIntoView({
+                    behavior: "smooth",
+                  });
                 }}
                 onMouseEnter={highlightParent}
                 onMouseLeave={unhighlightParent}
@@ -342,32 +343,21 @@ const Comment = ({ id, data }) => {
       </article>
     </>
   );
-  // });
 };
 
-// const Reply = ({ id, parentRef = null }) => {
 const Reply = ({ id }) => {
   const { threadState, streamState } = useContext(CommentsContext);
   const [state] = threadState;
   const [streaming] = streamState;
-
-  const ref = createRef();
 
   const comment = state["entities"]["comment"][id];
 
   if (comment.kind === "t1") {
     return (
       <>
-        <Comment
-          key={id}
-          id={id}
-          data={comment}
-          // ref={ref}
-          // parentRef={parentRef}
-        />
+        <Comment key={id} id={id} data={comment} />
         {!streaming &&
           comment.children?.map((childId) => {
-            // return <Reply key={childId} id={childId} parentRef={ref} />;
             return <Reply key={childId} id={childId} />;
           })}
       </>

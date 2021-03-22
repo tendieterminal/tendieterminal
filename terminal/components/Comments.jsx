@@ -1,5 +1,6 @@
 import React, { useEffect, useReducer, useState, createContext } from "react";
 import { useParams } from "react-router-dom";
+import useDynamicRefs from "use-dynamic-refs";
 
 import {
   reducer,
@@ -105,6 +106,7 @@ const Comments = () => {
           value={{
             threadState: [state, dispatch],
             streamState: [streaming, setStreaming],
+            refs: useDynamicRefs(),
             permalink: permalink,
             link_id: `t3_${id}`,
           }}
