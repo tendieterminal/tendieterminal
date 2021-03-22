@@ -1,4 +1,12 @@
-import React, { useContext, useState, memo, useEffect } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  createRef,
+  forwardRef,
+} from "react";
+
+import { Link } from "react-router-dom";
 
 import {
   faArrowUp,
@@ -12,10 +20,10 @@ import { FontAwesomeIcon as FAI } from "@fortawesome/react-fontawesome";
 
 import { CommentsContext } from "./Comments.jsx";
 
-import { actionCreators } from "../reducers/comments.js";
+import { actionCreators as actions } from "../reducers/comments.js";
 
-import { sanitize, randomString } from "../utils.js";
-import { normalizeComments } from "../utils/reddit.js";
+import { hash, randomString, sanitize, timeAgo } from "../utils.js";
+import { normalizeComments, mergeComments } from "../utils/reddit.js";
 
 import { Awards } from "./Metadata.jsx";
 
@@ -54,8 +62,11 @@ const NewReply = ({ onSubmit, onCancel, showCancel, label, autoFocus }) => {
 };
 
 const MoreReplies = ({ id, data }) => {
-  const { comments, permalink, link_id } = useContext(CommentsContext);
-  const [state, dispatch] = comments;
+  const { threadState, streamState, permalink, link_id } = useContext(
+    CommentsContext
+  );
+  const [state, dispatch] = threadState;
+  const [streaming] = streamState;
 
   const [fetchMore, setFetchMore] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -63,7 +74,7 @@ const MoreReplies = ({ id, data }) => {
   const api = new URL(
     data.parent
       ? `${permalink}/${data.parent.substring(3)}/.json?raw_json=1`
-      : "https://www.reddit.com/api/morechildren.json" +
+      : `${global.REDDIT}/api/morechildren.json` +
         "?api_type=json" +
         `&link_id=${link_id}` +
         `&children=${data.children.slice(0, 500).join(",")}` +
@@ -94,9 +105,7 @@ const MoreReplies = ({ id, data }) => {
               normalized[name].children?.forEach((cid) => {
                 relations.push({ child: cid, parent: name });
               });
-              updates.push(
-                actionCreators.create("comment", name, normalized[name])
-              );
+              updates.push(actions.create("comment", name, normalized[name]));
               return updates;
             }, []);
 
@@ -110,15 +119,13 @@ const MoreReplies = ({ id, data }) => {
               normalized[name].children?.forEach((cid) => {
                 relations.push({ child: cid, parent: name });
               });
-              creations.push(
-                actionCreators.create("comment", name, normalized[name])
-              );
+              creations.push(actions.create("comment", name, normalized[name]));
               return creations;
             }, []);
 
           relations.forEach((attachment) => {
             attachments.push(
-              actionCreators.attach(
+              actions.attach(
                 "comment",
                 attachment.child,
                 "parent",
@@ -131,12 +138,12 @@ const MoreReplies = ({ id, data }) => {
           const cascade = () => ({ children: cascade });
 
           dispatch(
-            actionCreators.batch(
-              actionCreators.delete("comment", id, cascade),
-              actionCreators.batch(
+            actions.batch(
+              actions.delete("comment", id, cascade),
+              actions.batch(
                 ...updates,
                 ...creations,
-                actionCreators.batch(...attachments)
+                actions.batch(...attachments)
               )
             )
           );
@@ -173,13 +180,6 @@ const MoreReplies = ({ id, data }) => {
       className="more"
       onClick={() => setFetchMore(true)}
       style={{
-        padding: "1vw",
-        border: "1px solid grey",
-        width: "12vw",
-        fontSize: "1vw",
-        textAlign: "center",
-        margin: "1vw",
-        marginTop: "0",
         ...margin,
       }}
     >
@@ -191,9 +191,11 @@ const MoreReplies = ({ id, data }) => {
   );
 };
 
-const Comment = memo(({ id, data }) => {
-  const { comments } = useContext(CommentsContext);
-  const [state, dispatch] = comments;
+// const Comment = forwardRef(({ id, data, parentRef }, ref) => {
+const Comment = ({ id, data }) => {
+  const { threadState, streamState } = useContext(CommentsContext);
+  const [state, dispatch] = threadState;
+  const [streaming] = streamState;
 
   const [collapsed, setCollapsed] = useState(false);
   const [replying, setReplying] = useState(false);
@@ -211,60 +213,48 @@ const Comment = memo(({ id, data }) => {
       const childId = randomString();
 
       dispatch(
-        actionCreators.batch(
-          actionCreators.create("comment", childId, {
+        actions.batch(
+          actions.create("comment", childId, {
             kind: "t1",
-            children: [],
             created: new Date(),
             depth: data.depth + 1,
             body: value,
           }),
-          actionCreators.attach("comment", childId, "parent", id, {
+          actions.attach("comment", childId, "parent", id, {
             reciprocalIndex: 0,
           })
         )
       );
 
       toggleReplying();
+
+      window.scrollTo(0, document.body.scrollHeight);
     }
   };
 
-  const timeAgo = (date) => {
-    let currentDate = new Date();
-
-    let yearDiff = currentDate.getFullYear() - date.getFullYear();
-
-    if (yearDiff > 0) return `${yearDiff}y`;
-
-    let monthDiff = currentDate.getMonth() - date.getMonth();
-
-    if (monthDiff > 0) return `${monthDiff}m`;
-
-    let dateDiff = currentDate.getDate() - date.getDate();
-
-    if (dateDiff > 0) return `${dateDiff}d`;
-
-    let hourDiff = currentDate.getHours() - date.getHours();
-
-    if (hourDiff > 0) return `${hourDiff}h`;
-
-    let minuteDiff = currentDate.getMinutes() - date.getMinutes();
-
-    if (minuteDiff > 0) return `${minuteDiff}m`;
-
-    return `1s`;
-  };
+  const classNames = ["comment", streaming && "streamed"]
+    .filter(Boolean)
+    .join(" ");
 
   const commentStyle = {
-    marginLeft: `${data.depth * 1.5}vw`,
+    marginLeft: `${streaming ? 0 : data.depth * 1.5}vw`,
   };
 
   const receivedAwards =
     data.all_awardings?.length || data.total_awards_received;
 
+  const highlightParent = () => {
+    parentRef.current.style.backgroundColor = "#383838";
+  };
+
+  const unhighlightParent = () => {
+    parentRef.current.style.backgroundColor = "black";
+  };
+
   return (
     <>
-      <article className="comment" style={commentStyle}>
+      {/* <article id={id} ref={ref} className={classNames} style={commentStyle}> */}
+      <article id={id} className={classNames} style={commentStyle}>
         <div className={data.depth ? "child" : "parent"}>
           <header className="metadata">
             <ul>
@@ -280,7 +270,12 @@ const Comment = memo(({ id, data }) => {
                 className="author"
                 style={{ color: data.distinguished ? "green" : "white" }}
               >
+                {/* <Link
+                  style={{ textDecoration: "none" }}
+                  to={`/u/${data.author}`}
+                > */}
                 {data.author}
+                {/* </Link> */}
               </li>
               <li className="score">
                 {data.score_hidden ? "—" : data.score}{" "}
@@ -310,9 +305,24 @@ const Comment = memo(({ id, data }) => {
               <li className="actions">
                 <FAI icon={faEllipsisH} onClick={toggleReplying} />
               </li>
-              <li className="created">{timeAgo(data.created)}</li>
+              <li className="created">{timeAgo(data.created, false)}</li>
             </ul>
           </header>
+          {streaming && data.parent && (
+            <section style={{ color: "blue" }}>
+              <span
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  parentRef?.current.scrollIntoView({ behavior: "smooth" });
+                }}
+                onMouseEnter={highlightParent}
+                onMouseLeave={unhighlightParent}
+              >
+                {">>"}
+                {hash(data.parent.substring(3))}
+              </span>
+            </section>
+          )}
           <section
             className="body"
             dangerouslySetInnerHTML={{
@@ -332,24 +342,41 @@ const Comment = memo(({ id, data }) => {
       </article>
     </>
   );
-});
+  // });
+};
 
+// const Reply = ({ id, parentRef = null }) => {
 const Reply = ({ id }) => {
-  const { comments } = useContext(CommentsContext);
-  const [state] = comments;
+  const { threadState, streamState } = useContext(CommentsContext);
+  const [state] = threadState;
+  const [streaming] = streamState;
+
+  const ref = createRef();
 
   const comment = state["entities"]["comment"][id];
 
-  return comment.kind === "t1" ? (
-    <>
-      <Comment key={id} id={id} data={comment} />
-      {comment.children?.map((childId) => {
-        return <Reply key={childId} id={childId} />;
-      })}
-    </>
-  ) : (
-    <MoreReplies key={id} id={id} data={comment} />
-  );
+  if (comment.kind === "t1") {
+    return (
+      <>
+        <Comment
+          key={id}
+          id={id}
+          data={comment}
+          // ref={ref}
+          // parentRef={parentRef}
+        />
+        {!streaming &&
+          comment.children?.map((childId) => {
+            // return <Reply key={childId} id={childId} parentRef={ref} />;
+            return <Reply key={childId} id={childId} />;
+          })}
+      </>
+    );
+  } else if (!streaming) {
+    return <MoreReplies key={id} id={id} data={comment} />;
+  } else {
+    return null;
+  }
 };
 
 const Replies = ({ ids }) => {

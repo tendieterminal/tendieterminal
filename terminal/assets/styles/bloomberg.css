@@ -347,6 +347,20 @@ article.comment:nth-of-type(6n + 6) {
   border-left-color: #a800ff;
 }
 
+article.comment.streamed > .child:before {
+  border-left: none;
+}
+
+article.more > .children {
+  padding: 1vw;
+  border: 1px solid grey;
+  width: 12vw;
+  font-size: 1vw;
+  text-align: center;
+  margin: 1vw;
+  margin-top: 0;
+}
+
 footer {
   background-color: black;
   position: fixed;
@@ -373,11 +387,12 @@ section.replies {
   margin: 2vw;
 }
 
-/* 
-article.body,
-article.post {
-  width: calc(80% - 2vw * 2);
-} */
+nav.comments {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1vw;
+}
 
 div.comments {
   display: flex;
@@ -386,17 +401,7 @@ div.comments {
 }
 
 section.replies {
-  /* display: flex;
-  flex-direction: column;
-  height: 100%; */
   width: 100%;
-  /* flexDirection: "column",
-    height: "100%",
-    justifyContent: "flex-end",
-    overflow: "hidden",
-    padding: "",
-    width: "100%",
-  }, */
 }
 
 article.body > .md {
@@ -407,18 +412,9 @@ nav.subscription {
   position: sticky;
   top: 0;
   height: 100vh;
-  /* backgroundColor: "#F7F7F7", */
-  /* borderRight: "1px solid #ECECEC", */
   width: 300px;
   display: flex;
   align-items: center;
-  /* display: flex;
-  flex-direction: column;
-  margin: auto;
-  position: fixed;
-  top: 50%;
-  right: 0;
-  transform: translate(-25%, -50%); */
 }
 
 div.unsupported {
@@ -457,7 +453,6 @@ ul.controls li input {
 }
 
 ul.voice {
-  margin-top: 1vw;
   display: flex;
   list-style: none;
   padding: 0;
@@ -476,6 +471,11 @@ label.range {
   font-size: 1vw;
 }
 
+/* TODO: input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+}
+
 @media only screen and (max-width: 830px) {
   body {
     font-size: 3vw;
@@ -486,18 +486,19 @@ label.range {
   div.comments {
     flex-direction: column;
   }
+
   section.replies,
   article.body {
     border: 0;
     margin: 0;
     width: 100%;
   }
-  .more {
-    width: 24vw;
+
+  article.more > .children {
+    width: 20vw;
+    font-size: 1.6vw;
   }
-  .more.child {
-    font-size: 2vw;
-  }
+
   nav.subscription {
     position: static;
     top: initial;
@@ -506,6 +507,8 @@ label.range {
     padding: 1vw;
     flex-direction: row;
     justify-content: space-evenly;
+    height: initial;
+    width: 100%;
   }
   div.unsupported {
     max-width: initial;

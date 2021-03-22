@@ -71,3 +71,71 @@ export const sleep = (ms) =>
   new Promise((res) => {
     setTimeout(res, ms);
   });
+
+export const hash = (str) => {
+  let hash = 5381,
+    i = str.length;
+
+  while (i) {
+    hash = (hash * 33) ^ str.charCodeAt(--i);
+  }
+
+  /* JavaScript does bitwise operations (like XOR, above) on 32-bit signed
+   * integers. Since we want the results to be always positive, convert the
+   * signed int to an unsigned by doing an unsigned bitshift. */
+  return hash >>> 0;
+};
+
+const timeUnits = {
+  year: 24 * 60 * 60 * 1000 * 365,
+  month: (24 * 60 * 60 * 1000 * 365) / 12,
+  day: 24 * 60 * 60 * 1000,
+  hour: 60 * 60 * 1000,
+  minute: 60 * 1000,
+  second: 1000,
+};
+
+const rtf = new Intl.RelativeTimeFormat("en");
+
+export const timeAgo = (date, full = true, now = new Date()) => {
+  const then = date instanceof Date ? date : new Date(date) * 1000;
+  const elapsed = then - now;
+
+  for (var u in timeUnits)
+    if (Math.abs(elapsed) > timeUnits[u] || u == "second")
+      if (full) {
+        return rtf.format(Math.round(elapsed / timeUnits[u]), u);
+      } else {
+        const time = rtf.formatToParts(
+          Math.round(elapsed / timeUnits[u]),
+          u
+        )[0];
+        return time.value + time.unit.charAt(0);
+      }
+};
+
+export const documentHeight = () => {
+  return Math.max(
+    document.body.scrollHeight,
+    document.documentElement.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.offsetHeight,
+    document.body.clientHeight,
+    document.documentElement.clientHeight
+  );
+};
+
+export const documentWindowHeightOffset = () => {
+  const windowHeight =
+    window.innerHeight ||
+    (document.documentElement || document.body).clientHeight;
+  return documentHeight() - windowHeight;
+};
+
+export const percentageScrolled = () => {
+  const scrollTop =
+    window.pageYOffset ||
+    (document.documentElement || document.body.parentNode || document.body)
+      .scrollTop;
+  return Math.floor((scrollTop / documentWindowHeightOffset()) * 100);
+};

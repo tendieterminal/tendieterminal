@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import Subreddit from "../components/Subreddit.jsx";
 import Comments from "../components/Comments.jsx";
 import User from "../components/User.jsx";
-import NotFound from "../components/NotFound.jsx";
+import Error from "../components/Error.jsx";
 
 // const initialState = {
 //   theme: localStorage.getItem("theme") || "bloomberg",
@@ -18,8 +18,8 @@ const Terminal = () => {
         <Route exact path="/" component={Subreddit} />
         <Route exact path="/r/:sub?" component={Subreddit} />
         <Route exact path="/r/:sub/comments/:id/:slug" component={Comments} />
-        <Route exact path="/u/:handle" component={User} />
-        <Route component={NotFound} />
+        <Route exact path="/(u|user)/:handle" component={User} />
+        <Route component={Error} />
       </Switch>
     </Router>
   );

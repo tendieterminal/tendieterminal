@@ -1,11 +1,15 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useContext, useRef, useEffect, useState } from "react";
 
 import * as Comlink from "comlink";
 import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.js";
 
-import { takeRight, randomInt } from "../utils.js";
+import { actionCreators } from "../reducers/comments.js";
+import { takeRight, randomInt, percentageScrolled } from "../utils.js";
 import { stickyState } from "../utils/react.jsx";
 
+import { CommentsContext } from "./Comments.jsx";
+
+import Select from "./Select.jsx";
 import useSpeechSynthesis from "./speechSynthesis.jsx";
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
@@ -16,10 +20,14 @@ const preferredVoices = [
   (v) => v.default,
 ];
 
-export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
+export const Subscription = ({ subreddit, link_id }) => {
+  const { threadState, streamState } = useContext(CommentsContext);
+
+  const [state, dispatch] = threadState;
+  const [streaming, setStreaming] = streamState;
+
   const synth = useSpeechSynthesis();
 
-  const [subscribed, setSubscribed] = useState(false);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
 
@@ -62,12 +70,39 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
 
     threadWorkerApiRef.current = Comlink.wrap(threadWorkerRef.current);
 
+    if (streaming) {
+      handleSubscription(state);
+      window.scrollTo(0, document.body.scrollHeight);
+    } else {
+      window.scrollTo(0, 0);
+    }
+
     return () => {
       synth.cancel();
       threadWorkerRef.current?.terminate();
       threadWorkerApiRef.current?.[Comlink.releaseProxy]();
+      updateSynthQ([]);
     };
-  }, []);
+  }, [streaming]);
+
+  const handleSubscription = async () => {
+    const iterator = await threadWorkerApiRef.current?.startSubscription(
+      subreddit,
+      link_id,
+      Object.keys(state["entities"]["comment"])
+    );
+
+    // const iterator = await threadWorkerApiRef.current?.startShitposting();
+
+    for await (const incoming of iterator) {
+      let scroll = percentageScrolled() >= 99;
+      dispatch(actionCreators.batch(...incoming.batch));
+      updateSynthQ((q) => takeRight([...q, ...incoming.speech], depth));
+      if (scroll) {
+        window.scrollTo(0, document.body.scrollHeight);
+      }
+    }
+  };
 
   useEffect(() => {
     setVoiceIndex();
@@ -109,25 +144,6 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
     }
   }, [paused]);
 
-  // TODO: useMemo?
-  const handleThreadWork = async () => {
-    if (!subscribed) {
-      setSubscribed(true);
-
-      const iterator = await threadWorkerApiRef.current?.startSubscription(
-        subreddit,
-        link_id
-      );
-
-      // const iterator = await threadWorkerApiRef.current?.startShitposting();
-
-      for await (const comments of iterator) {
-        dispatch(actions.batch(...comments.batch));
-        updateSynthQ((q) => takeRight([...q, ...comments.speech], depth));
-      }
-    }
-  };
-
   const toggleMute = () => {
     setMuted(!muted);
   };
@@ -151,10 +167,9 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
               <li>
                 <button
                   id="stream"
-                  onClick={handleThreadWork}
-                  disabled={subscribed}
+                  onClick={() => setStreaming(streaming ? false : true)}
                 >
-                  Stream
+                  {streaming ? "Stop" : "Stream"}
                 </button>
               </li>
               <li>
@@ -164,7 +179,7 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
                   value="Random Speech"
                 />
               </li>
-              {subscribed && (
+              {streaming && (
                 <ul className="voice">
                   <li>
                     <button onClick={toggleMute}>
@@ -180,17 +195,14 @@ export const Subscription = ({ subreddit, link_id, actions, dispatch }) => {
               )}
               <li className="hide-on-mobile">
                 <span>Voice</span>
-                <select
-                  value={voiceURI}
-                  onChange={(e) => setVoiceURI(e.currentTarget.value)}
-                >
-                  <option value="">Default Voice</option>
-                  {synth.voices.map((voice) => (
-                    <option key={voice.voiceURI} value={voice.voiceURI}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  options={synth.voices}
+                  placeholder={"Default Voice"}
+                  selected={voiceURI}
+                  setState={setVoiceURI}
+                  value={(o) => o.voiceURI}
+                  label={(o) => `${o.name} (${o.lang})`}
+                />
               </li>
               <li className="hide-on-mobile">
                 <span>Rate</span>

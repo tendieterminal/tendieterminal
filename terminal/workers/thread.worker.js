@@ -6,7 +6,7 @@ import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
-import { actionCreators } from "../reducers/comments.js";
+import { actionCreators as actions } from "../reducers/comments.js";
 import { sleep } from "../utils.js";
 import Parser from "../services/parser.ts";
 
@@ -36,13 +36,21 @@ parser.addPreset("url", (url) => {
   }
 });
 
-const normalizeComment = (data, parent) => {
-  const hasParent = parent && data.parent_id && data.parent_id.startsWith("t1");
+const normalizeComment = (data, state) => {
+  const hasParent =
+    data.parent_id &&
+    data.parent_id.startsWith("t1") &&
+    state.includes(data.parent_id);
+
   return {
-    kind: "t1",
-    depth: parent && data.depth ? data.depth : 0,
+    hidden: false,
     collapsed: false,
     filtered: false, // TODO: filter() array of parser.toTree() node properties
+    muted: false,
+
+    kind: "t1",
+    depth: data.depth ? data.depth : 0,
+
     ...(hasParent && { parent: data.parent_id }),
     ...(data.created_utc && {
       created: new Date(data.created_utc * 1000),
@@ -61,7 +69,7 @@ const normalizeComment = (data, parent) => {
   };
 };
 
-async function* startSubscription(subreddit, link_id, parents = false) {
+async function* startSubscription(subreddit, link_id, state) {
   let token = await fetchAnonymousToken();
   console.log("Will fetch at " + token.expiryTime);
 
@@ -74,47 +82,55 @@ async function* startSubscription(subreddit, link_id, parents = false) {
 
   let comments = [];
 
+  let identifiers = state;
+
   stream.on("post", (c) => {
     comments.push(c);
   });
 
   for (;;) {
     let now = new Date();
-    let actions = [];
+    let batch = [];
     let bodies = [];
 
     while (comments.length) {
       let comment = comments.shift();
 
       if (comment.link_id === "t3_" + link_id) {
-        let normalized = normalizeComment(comment, parents);
+        identifiers.push(comment.name);
+        let normalized = normalizeComment(comment, identifiers);
 
-        actions.push(
-          actionCreators.create("comment", comment.name, normalized, 0)
-        );
-
+        // TODO: add a permalink to the comment, it is not in the state
         if (normalized.parent) {
-          actions.push(
-            actionCreators.attach(
-              "comment",
-              comment.name,
-              "parent",
-              normalized.parent,
-              { reciprocalIndex: 0 }
+          batch.push(
+            actions.batch(
+              actions.create("comment", comment.name, normalized),
+              actions.attach(
+                "comment",
+                comment.name,
+                "parent",
+                normalized.parent
+              )
             )
           );
+        } else {
+          batch.push(actions.create("comment", comment.name, normalized));
         }
 
         // TODO: filter() array of parser.toTree() node properties
-        bodies.push({
+        bodies.unshift({
           id: comment.name,
           body: parser.render(comment.body),
+          created: comment.created,
         });
       }
     }
 
-    if (actions.length) {
-      yield { batch: actions, speech: bodies };
+    if (batch.length) {
+      yield {
+        batch: batch,
+        speech: bodies.sort((a, b) => (a.created > b.created ? -1 : 1)),
+      };
     }
 
     if (token.expiryTime < now) {

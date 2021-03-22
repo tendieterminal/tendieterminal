@@ -6,6 +6,7 @@ import { sanitize } from "../utils.js";
 
 import Select from "./Select.jsx";
 import SortButton from "./SortButton.jsx";
+import Error from "./Error.jsx";
 
 import { Author, Metadata } from "./Metadata.jsx";
 import { Thumbnail } from "./Content.jsx";
@@ -78,7 +79,7 @@ const Subreddit = () => {
   const [sortType, time] = sort.split(" ");
 
   const api = new URL(
-    `${global.REDDIT}/${subreddit}/` +
+    `${global.REDDIT}/r/${subreddit}/` +
       `${
         search || flair ? `search/.json?sort=${sortType}` : `${sortType}.json`
       }`
@@ -124,8 +125,8 @@ const Subreddit = () => {
       })
       .catch((e) => {
         setLoading(false);
-        setError(e);
         setListings(null);
+        setError("Failed to fetch subreddit");
         console.error("Error:", e);
       });
   }, [sort, time, search, flair]);
@@ -149,7 +150,7 @@ const Subreddit = () => {
         .catch((e) => {
           setLoading(false);
           setLoadingMore(false);
-          setError(e);
+          setError("Failed to load more");
           console.error("Error:", e);
         });
     } else {
@@ -180,7 +181,7 @@ const Subreddit = () => {
 
   return (
     <div>
-      {error && <section className="error">{error}</section>}
+      {error && <Error message={error} />}
       {listings !== null && (
         <>
           <nav className="subreddit">

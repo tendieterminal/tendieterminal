@@ -1,3 +1,5 @@
+import { actionCreators } from "../reducers/comments.js";
+
 export const clientInfo = {
   userAgent: "TendieTerminal",
   clientId: "VRvIgSI5lyHa4w",
@@ -43,9 +45,15 @@ export const normalizeComments = (comments, normalized = {}) => {
     }
 
     const values = {
+      hidden: false,
+      collapsed: false,
+      filtered: false, // TODO: filter() array of parser.toTree() node properties
+      muted: false,
+
       kind: comment.kind,
       children: children,
       depth: data.depth ? data.depth : 0,
+
       ...(hasParent && { parent: data.parent_id }),
       ...(data.created_utc && {
         created: new Date(data.created_utc * 1000),

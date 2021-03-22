@@ -40,7 +40,6 @@ async function* startShitposting() {
     while (true) {
       const childId = randomString();
       const body = randomInt(9999);
-      // lorem.generateWords(randomInt(12))
 
       comments.push(
         actionCreators.create(

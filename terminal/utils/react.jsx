@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export const stickyState = (defaultValue, key) => {
   const [value, setValue] = useState(() => {
@@ -13,67 +13,82 @@ export const stickyState = (defaultValue, key) => {
   return [value, setValue];
 };
 
-export const useAudio = ({
-  url,
-  autoplay = false,
-  onplay = () => {},
-  onplaying = () => {},
-  onended = () => {},
-  onpause = () => {},
-}) => {
-  const [audio] = useState(new Audio(url));
+export const useAudio = ({ url, autoplay = false }) => {
+  const audioRef = useRef(null);
+
+  const [audioSrc, setSrc] = useState(url);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
-
-  const toggle = () => setPlaying(!playing);
-
-  const play = async () => {
-    await audio.play();
-  };
-
-  const pause = () => {
-    audio.pause();
-  };
+  const [isLoading, setLoading] = useState(true);
+  const [isSeeking, setSeeking] = useState(false);
+  const [autoplayed, setAutoplayed] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
+  }, [audioSrc]);
+
+  const playAudio = async () => {
     try {
-      if (autoplay) {
-        play();
-      }
+      await audioRef.current.play();
     } catch (e) {
       setPlaying(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    playing ? play() : pause();
-  }, [playing]);
-
-  useEffect(() => {
-    audio.onplaying = () => {
-      onplaying();
-    };
-
-    audio.onplay = () => {
-      onplay();
-      setPlaying(true);
-    };
-
-    audio.onended = () => {
-      onended();
-      setPlaying(false);
-    };
-
-    audio.onpause = () => {
-      onpause();
-      setPlaying(false);
-    };
-
-    return () => {
-      audio.onplay = () => {};
-      audio.onended = () => {};
-      audio.onpause = () => {};
-    };
-  }, []);
-
-  return [playing, toggle];
+  return [
+    <audio
+      src={audioSrc}
+      hidden
+      ref={audioRef}
+      onLoadedData={() => {
+        setLoading(false);
+        setDuration(audioRef.current.duration);
+        if (playing || (autoplay && !autoplayed)) {
+          if (autoplay && !autoplayed) {
+            setAutoplayed(true);
+          }
+          playAudio();
+        }
+      }}
+      onSeeking={() => setSeeking(true)}
+      onSeeked={() => setSeeking(false)}
+      onTimeUpdate={() => {
+        setCurrentTime(audioRef.current.currentTime);
+      }}
+      onPlay={() => {
+        setPlaying(true);
+      }}
+    />,
+    {
+      currentTime,
+      duration,
+      playing,
+      isSeeking,
+      isLoading,
+      progress: (currentTime / duration) * 100,
+      setTime: (seconds) => {
+        audioRef.current.currentTime = seconds;
+      },
+      setSrc: (src) => {
+        setPlaying(false);
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setSrc(src);
+      },
+      pause: () => {
+        audioRef.current.pause();
+      },
+      play: () => {
+        playAudio();
+      },
+      toggle: () => {
+        if (playing) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play();
+        }
+      },
+    },
+  ];
 };

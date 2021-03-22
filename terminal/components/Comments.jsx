@@ -10,9 +10,11 @@ import {
 
 import { normalizeComments } from "../utils/reddit.js";
 
+import SortButton from "./SortButton.jsx";
 import Post from "./Post.jsx";
 import Replies from "./Replies.jsx";
 import Subscription from "./Subscription.jsx";
+import Error from "./Error.jsx";
 
 export const CommentsContext = createContext();
 
@@ -34,19 +36,21 @@ const Comments = () => {
   const [sort, setSort] = useState(sortDefault);
   const [sortType, time] = sort.split(" ");
 
-  const permalink = `${global.REDDIT}/${sub}/comments/${id}/${slug}`;
-  const listing = `${global.REDDIT}/${sub}/comments/${id}`;
+  const [streaming, setStreaming] = useState(false);
+
+  const permalink = `${global.REDDIT}/r/${sub}/comments/${id}/${slug}`;
+  const listing = `${global.REDDIT}/r/${sub}/comments/${id}`;
 
   const api = new URL(
-    `${listing}/${sortType}.json` +
-      (time ? `?t=${time}&raw_json=1` : `?raw_json=1`)
+    `${listing}/.json?sort=${streaming ? "new" : sortType}` +
+      (time ? `&t=${time}&raw_json=1` : `&raw_json=1`)
   );
 
-  const getRootCommentIds = (state) => {
+  const getCommentIds = (state) => {
     const ids = selectors.getIds(state, { type: "comment" });
     return ids.filter((id) => {
       const comment = selectors.getEntity(state, { type: "comment", id });
-      return !!comment && !comment.parent;
+      return streaming ? !!comment : !!comment && !comment.parent;
     });
   };
 
@@ -54,8 +58,6 @@ const Comments = () => {
 
   useEffect(() => {
     setLoading(true);
-
-    window.scrollTo(0, 0);
 
     fetch(api.href)
       .then((response) => response.json())
@@ -67,7 +69,6 @@ const Comments = () => {
         setPost(mapChildren(json[0]));
 
         const normalized = normalizeComments(json[1]);
-        console.log(normalized);
 
         dispatch(
           actionCreators.setState({
@@ -75,55 +76,81 @@ const Comments = () => {
               comment: normalized,
             },
             ids: {
-              comment: Object.keys(normalized),
+              comment: streaming
+                ? Object.keys(normalized).sort((a, b) =>
+                    normalized[a].created > normalized[b].created ? 1 : -1
+                  )
+                : Object.keys(normalized),
             },
           })
         );
+
+        window.scrollTo(0, streaming ? document.body.scrollHeight : 0);
 
         setError(null);
       })
       .catch((error) => {
         setLoading(false);
-        setError(error);
+        setError("Failed to load comments");
         setPost(null);
         console.error("Error:", error);
       });
-  }, [sort]);
-
-  const styles = {
-    container: {
-      display: "flex",
-      flexDirection: "row",
-      height: "100%",
-    },
-  };
+  }, [sort, streaming]);
 
   return (
-    <CommentsContext.Provider
-      value={{
-        comments: [state, dispatch],
-        permalink: permalink,
-        link_id: `t3_${id}`,
-      }}
-    >
+    <>
+      {error && <Error message={error} />}
       {post !== null && (
-        <div className="comments">
-          <section className="replies" style={{ overflow: "hidden" }}>
-            {post.map((p) => (
-              <Post key={p.id} data={p} />
-            ))}
-            <Replies ids={getRootCommentIds(state)} />
-          </section>
-          <Subscription
-            subreddit={sub}
-            link_id={id}
-            dispatch={dispatch}
-            actions={actionCreators}
-          />
-          {/* <Sidebar dispatch={dispatch} /> */}
-        </div>
+        <CommentsContext.Provider
+          value={{
+            threadState: [state, dispatch],
+            streamState: [streaming, setStreaming],
+            permalink: permalink,
+            link_id: `t3_${id}`,
+          }}
+        >
+          <>
+            {!streaming && (
+              <nav className="comments">
+                <section className="show-on-mobile">
+                  <button
+                    id="stream"
+                    onClick={() => setStreaming(streaming ? false : true)}
+                  >
+                    {streaming ? "Stop" : "Stream"}
+                  </button>
+                </section>
+                <section>
+                  {sortOptions.map((option, idx) => (
+                    <SortButton
+                      key={idx}
+                      label={option}
+                      option={option.toLowerCase()}
+                      setState={setSort}
+                      selected={sort === option.toLowerCase()}
+                    />
+                  ))}
+                </section>
+              </nav>
+            )}
+            <div className="comments">
+              <section className="replies" style={{ overflow: "hidden" }}>
+                {post.map((p) => (
+                  <Post key={p.id} data={p} />
+                ))}
+                <Replies ids={getCommentIds(state)} />
+              </section>
+              <Subscription
+                subreddit={sub}
+                link_id={id}
+                dispatch={dispatch}
+                actions={actionCreators}
+              />
+            </div>
+          </>
+        </CommentsContext.Provider>
       )}
-    </CommentsContext.Provider>
+    </>
   );
 };
 

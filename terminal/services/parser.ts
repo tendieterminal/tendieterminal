@@ -191,8 +191,10 @@ export class Parser {
       const node: Node = {
         type: defaultType,
         text: value,
-        speak: true,
-        display: true,
+        hidden: false,
+        collapsed: false,
+        filtered: false,
+        muted: false,
       };
 
       if (groups) node.groups = groups.slice(0);
@@ -201,11 +203,18 @@ export class Parser {
 
     // in case the user is returning some kind of custom object
     if (Node.is(value))
-      return { collapsed: false, filtered: false, muted: false, ...value };
+      return {
+        hidden: false,
+        collapsed: false,
+        filtered: false,
+        muted: false,
+        ...value,
+      };
 
     return {
       type: defaultType,
       text: str,
+      hidden: false,
       collapsed: false,
       filtered: false,
       muted: false,
@@ -281,6 +290,7 @@ export class Parser {
         {
           type: "text",
           text: str,
+          hidden: false,
           collapsed: false,
           filtered: false,
           muted: false,
