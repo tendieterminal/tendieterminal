@@ -22,16 +22,16 @@ const Error = ({ message = "This page expired worthless" }) => {
       audio: "/terminal/autism/ber.mp3",
       speed: 1,
     },
-    {
-      visual: "/terminal/autism/baby.gif",
-      audio: "/terminal/autism/feeling.mp3",
-      speed: 1,
-    },
-    {
-      visual: "/terminal/autism/kid.gif",
-      audio: "/terminal/autism/house_of_ill.mp3",
-      speed: 2,
-    },
+    // {
+    //   visual: "/terminal/autism/baby.gif",
+    //   audio: "/terminal/autism/feeling.mp3",
+    //   speed: 1,
+    // },
+    // {
+    //   visual: "/terminal/autism/kid.gif",
+    //   audio: "/terminal/autism/house_of_ill.mp3",
+    //   speed: 2,
+    // },
   ];
 
   const r = () => {

@@ -1,6 +1,6 @@
 {
   "name": "tendieterminal",
-  "version": "0.1",
+  "version": "0.2",
   "main": "index.js",
   "scripts": {
     "start": "webpack-dev-server --mode development --open --hot --history-api-fallback",
