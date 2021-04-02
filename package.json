@@ -30,7 +30,7 @@
     "snoowrap": "^1.22.0"
   },
   "devDependencies": {
-    "use-dynamic-refs": "^1.0.0",
+    "react-transition-group": "^4.4.1",
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.0",
     "babel-loader": "^8.1.0",
@@ -38,6 +38,7 @@
     "html-webpack-plugin": "^4.0.4",
     "style-loader": "^1.1.3",
     "url-loader": "^4.0.0",
+    "use-dynamic-refs": "^1.0.0",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.10.3",

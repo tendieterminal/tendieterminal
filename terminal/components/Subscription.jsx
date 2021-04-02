@@ -68,6 +68,11 @@ export const Subscription = ({ subreddit, link_id }) => {
       type: "module",
     });
 
+    // threadWorkerRef.current = new Worker("../workers/shitpost.worker.js", {
+    //   name: "shitpost",
+    //   type: "module",
+    // });
+
     threadWorkerApiRef.current = Comlink.wrap(threadWorkerRef.current);
 
     if (streaming) {

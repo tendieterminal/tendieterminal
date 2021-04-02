@@ -1,6 +1,8 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 import { Link } from "react-router-dom";
+
+import { CSSTransition } from "react-transition-group";
 
 import {
   faArrowUp,
@@ -16,8 +18,14 @@ import { CommentsContext } from "./Comments.jsx";
 
 import { actionCreators as actions } from "../reducers/comments.js";
 
-import { hash, randomString, sanitize, timeAgo } from "../utils.js";
-import { normalizeComments, mergeComments } from "../utils/reddit.js";
+import {
+  hash,
+  isInViewport,
+  randomString,
+  sanitize,
+  timeAgo,
+} from "../utils.js";
+import { normalizeComments } from "../utils/reddit.js";
 
 import { Awards } from "./Metadata.jsx";
 
@@ -192,6 +200,7 @@ const Comment = ({ id, data }) => {
   const [getRef, setRef] = refs;
 
   const [collapsed, setCollapsed] = useState(false);
+  // const [parentVisible, setParentVisible] = useState(true);
   const [replying, setReplying] = useState(false);
 
   const toggleCollapsed = () => setCollapsed(!collapsed);
@@ -222,7 +231,16 @@ const Comment = ({ id, data }) => {
 
       toggleReplying();
 
-      window.scrollTo(0, document.body.scrollHeight);
+      (function waitUntil() {
+        const newPost = getRef(childId);
+        if (newPost) {
+          newPost.current.scrollIntoView({
+            behavior: "smooth",
+          });
+        } else {
+          setTimeout(waitUntil, 500);
+        }
+      })();
     }
   };
 
@@ -236,14 +254,6 @@ const Comment = ({ id, data }) => {
 
   const receivedAwards =
     data.all_awardings?.length || data.total_awards_received;
-
-  const highlightParent = () => {
-    getRef(data.parent).current.style.backgroundColor = "#383838";
-  };
-
-  const unhighlightParent = () => {
-    getRef(data.parent).current.style.backgroundColor = "black";
-  };
 
   return (
     <>
@@ -308,21 +318,61 @@ const Comment = ({ id, data }) => {
             </ul>
           </header>
           {streaming && data.parent && (
-            <section style={{ color: "blue" }}>
-              <span
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  getRef(data.parent).current.scrollIntoView({
-                    behavior: "smooth",
-                  });
-                }}
-                onMouseEnter={highlightParent}
-                onMouseLeave={unhighlightParent}
+            <>
+              {/* <CSSTransition
+                in={parentVisible}
+                timeout={200}
+                classNames="context"
+                unmountOnExit
               >
-                {">>"}
-                {hash(data.parent.substring(3))}
-              </span>
-            </section>
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      width: "50%",
+                      backgroundColor: "red",
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitize(
+                        state["entities"]["comment"][data.parent].body
+                      ),
+                    }}
+                  />
+                </div>
+              </CSSTransition> */}
+              <section style={{ color: "blue" }}>
+                <span
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    getRef(data.parent).current.scrollIntoView({
+                      behavior: "smooth",
+                    });
+                  }}
+                  onMouseEnter={() => {
+                    // if (isInViewport(parent)) {
+                    if (data.parent) {
+                      const parent = getRef(data.parent);
+                      if (parent && parent.current)
+                        parent.current.style.backgroundColor = "#383838";
+                    }
+                    // } else {
+                    // setParentVisible(true);
+                    // }
+                  }}
+                  onMouseLeave={() => {
+                    // setParentVisible(false);
+                    if (data.parent) {
+                      const parent = getRef(data.parent);
+                      if (parent && parent.current)
+                        parent.current.style.backgroundColor = "black";
+                    }
+                  }}
+                >
+                  {">>"}
+                  {hash(data.parent.substring(3))}
+                </span>
+              </section>
+            </>
           )}
           <section
             className="body"

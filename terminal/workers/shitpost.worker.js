@@ -3,27 +3,27 @@ import { asyncIterableTransferHandler } from "../utils/iterableTransferHandlers.
 
 Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
-import { LoremIpsum } from "lorem-ipsum";
-
 import { randomInt, randomString, sleep } from "../utils.js";
 import { actionCreators } from "../reducers/comments.js";
+
+import Parser from "../services/parser.ts";
 
 const shitpostApi = {
   startShitposting,
 };
 
-async function* startShitposting() {
-  const lorem = new LoremIpsum({
-    sentencesPerParagraph: {
-      max: 8,
-      min: 4,
-    },
-    wordsPerSentence: {
-      max: 16,
-      min: 4,
-    },
-  });
+const parser = new Parser();
 
+// parser.addRule(/guh+/gi, (guh) => {
+//   return `<audio src="/terminal/autism/guh.mp3" />`;
+// });
+
+const randomShitpost = () => {
+  const shitposts = [randomInt(9999)];
+  return shitposts[Math.floor(Math.random() * shitposts.length)];
+};
+
+async function* startShitposting() {
   const shitposters = [
     "QueefMaster",
     "POTATO_IN_ASS",
@@ -39,24 +39,27 @@ async function* startShitposting() {
 
     while (true) {
       const childId = randomString();
-      const body = randomInt(9999);
+      const body = randomShitpost();
 
       comments.push(
-        actionCreators.create(
-          "comment",
-          childId,
-          {
+        actionCreators.batch(
+          actionCreators.create("comment", childId, {
+            hidden: false,
+            collapsed: false,
+            filtered: false, // TODO: filter() array of parser.toTree() node properties
+            muted: false,
+
             kind: "t1",
+            depth: 0,
             author: shitposters[Math.floor(Math.random() * shitposters.length)],
             score: randomInt(2),
             created: new Date(),
             body: body,
-          },
-          0
+          })
         )
       );
 
-      bodies.push({ id: randomInt(9999), body: body });
+      bodies.unshift({ id: randomInt(9999), body: parser.render(body) });
 
       count++;
 

@@ -8,6 +8,7 @@ Comlink.transferHandlers.set("asyncIterable", asyncIterableTransferHandler);
 
 import { actionCreators as actions } from "../reducers/comments.js";
 import { sleep } from "../utils.js";
+
 import Parser from "../services/parser.ts";
 
 const subscriptionApi = {
@@ -35,6 +36,11 @@ parser.addPreset("url", (url) => {
     return url;
   }
 });
+
+// Note: SSML is as of yet unimplemented pretty much anywhere
+// parser.addRule(/guh+/gi, (guh) => {
+//   return `<audio src="/terminal/autism/guh.mp3">${guh}</audio>`;
+// });
 
 const normalizeComment = (data, state) => {
   const hasParent =
